@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const budgetSchema = new mongoose.Schema(
+const insightSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -11,12 +11,12 @@ const budgetSchema = new mongoose.Schema(
       type: String, // e.g. "2026-02"
       required: true,
     },
-    totalBudget: {
-      type: Number,
+    message: {
+      type: String,
       required: true,
     },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Budget", budgetSchema);
+module.exports = mongoose.model("Insight", insightSchema);
