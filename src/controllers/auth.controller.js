@@ -7,32 +7,39 @@ exports.register = async (req, res) => {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({ message: "Missing fields" });
+      return res
+        .status(400)
+        .json({ message: "Invalid inputs", success: "fail" });
     }
 
     if (!emailValidator(email)) {
-      return res.status(400).json({ message: "Invalid email format" });
+      return res
+        .status(400)
+        .json({ message: "Invalid inputs", success: "fail" });
     }
 
-    const exists = await User.findOne({ email });
+    const exists = await findOne({ email });
     if (exists) {
-      return res.status(409).json({ message: "Email already registered" });
+      return res
+        .status(409)
+        .json({ message: "Email already registered", success: "fail" });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await hash(password, 10);
 
-    const user = await User.create({
+    const user = await create({
       name,
       email,
       passwordHash,
     });
 
     res.status(201).json({
-      message: "User registered",
+      message: "Account created successFully",
+      success: "success",
       userId: user._id,
     });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", success: "fail" });
   }
 };
 
@@ -41,24 +48,32 @@ exports.login = async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: "Missing fields" });
+      return res
+        .status(400)
+        .json({ message: "Invalid inputs", success: "fail" });
     }
 
     if (!emailValidator(email)) {
-      return res.status(400).json({ message: "Invalid email format" });
+      return res
+        .status(400)
+        .json({ message: "Invalid inputs", success: "fail" });
     }
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res
+        .status(401)
+        .json({ message: "Invalid credentials", success: "fail" });
     }
 
-    const match = await bcrypt.compare(password, user.passwordHash);
+    const match = await compare(password, user.passwordHash);
     if (!match) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res
+        .status(401)
+        .json({ message: "Invalid credentials", success: "fail" });
     }
 
-    res.json({
+    res.status(200).json({
       message: "Login successful",
       userId: user._id,
       name: user.name,
@@ -66,7 +81,7 @@ exports.login = async (req, res) => {
       currency: user.currency,
     });
   } catch {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", success: "fail" });
   }
 };
 

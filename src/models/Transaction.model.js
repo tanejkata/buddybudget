@@ -8,7 +8,7 @@ const transactionSchema = new mongoose.Schema(
       required: true,
     },
     categoryId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String, //mongoose.Schema.Types.ObjectId,
       ref: "Category",
       required: true,
     },
