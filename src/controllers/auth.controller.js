@@ -5,7 +5,6 @@ const { emailValidator } = require("../utils/utils");
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-
     if (!name || !email || !password) {
       return res
         .status(400)
@@ -17,17 +16,17 @@ exports.register = async (req, res) => {
         .status(400)
         .json({ message: "Invalid inputs", success: "fail" });
     }
+    const exists = await User.findOne({ email });
 
-    const exists = await findOne({ email });
     if (exists) {
       return res
         .status(409)
         .json({ message: "Email already registered", success: "fail" });
     }
 
-    const passwordHash = await hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 10);
 
-    const user = await create({
+    const user = await User.create({
       name,
       email,
       passwordHash,
@@ -66,7 +65,7 @@ exports.login = async (req, res) => {
         .json({ message: "Invalid credentials", success: "fail" });
     }
 
-    const match = await compare(password, user.passwordHash);
+    const match = await bcrypt.compare(password, user.passwordHash);
     if (!match) {
       return res
         .status(401)
