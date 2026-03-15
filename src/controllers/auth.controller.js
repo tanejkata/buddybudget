@@ -16,7 +16,7 @@ exports.register = async (req, res) => {
         .status(400)
         .json({ message: "Invalid inputs", success: "fail" });
     }
-    const exists = await User.findOne({ email });
+    const exists = await User.findOne({ email }).select("-passwordHash");
 
     if (exists) {
       return res
@@ -71,13 +71,15 @@ exports.login = async (req, res) => {
         .status(401)
         .json({ message: "Invalid credentials", success: "fail" });
     }
+    const userWithoutPassword = await User.findById(user._id).select(
+      "-passwordHash"
+    );
 
     res.status(200).json({
       message: "Login successful",
-      userId: user._id,
-      name: user.name,
-      email: user.email,
-      currency: user.currency,
+      data: {
+        user: userWithoutPassword,
+      },
     });
   } catch {
     res.status(500).json({ message: "Server error", success: "fail" });

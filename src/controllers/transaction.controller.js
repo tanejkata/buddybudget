@@ -123,26 +123,46 @@ exports.updateTransaction = async (req, res) => {
 };
 
 exports.getTransaction = async (req, res) => {
-  // GET transactions by userId + month (YYYY-MM)
   try {
-    const { id, userId, year, month, day } = req.query;
+    const { id, userId, year, month, day, category } = req.query;
 
+    // 1️⃣ Get single transaction
     if (id) {
-      const transactions = await Transaction.findOne({ _id: id }).sort({
-        transactionDate: -1,
-      });
+      const transaction = await Transaction.findById(id);
 
-      res.json({
+      if (!transaction) {
+        return res.status(404).json({
+          success: false,
+          message: "Transaction not found",
+        });
+      }
+
+      return res.json({
+        success: true,
         count: 1,
-        transactions,
-        sucess: "success",
+        transactions: [transaction],
+      });
+    }
+
+    // 2️⃣ userId required for list
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "userId is required",
       });
     }
 
     const query = { userId };
 
+    // 3️⃣ Filter by category
+    if (category) {
+      query.categoryId = category;
+    }
+
+    // 4️⃣ Date filtering
     if (year) {
-      let start, end;
+      let start;
+      let end;
 
       // Year only
       if (!month) {
@@ -150,7 +170,7 @@ exports.getTransaction = async (req, res) => {
         end = new Date(`${Number(year) + 1}-01-01`);
       }
 
-      // Year + Month
+      // Year + month
       else if (month && !day) {
         const m = String(month).padStart(2, "0");
         start = new Date(`${year}-${m}-01`);
@@ -158,7 +178,7 @@ exports.getTransaction = async (req, res) => {
         end.setMonth(end.getMonth() + 1);
       }
 
-      // Year + Month + Day
+      // Year + month + day
       else if (month && day) {
         const m = String(month).padStart(2, "0");
         const d = String(day).padStart(2, "0");
@@ -167,20 +187,28 @@ exports.getTransaction = async (req, res) => {
         end.setDate(end.getDate() + 1);
       }
 
-      query.transactionDate = { $gte: start, $lt: end };
+      query.transactionDate = {
+        $gte: start,
+        $lt: end,
+      };
     }
 
+    // 5️⃣ Fetch transactions
     const transactions = await Transaction.find(query).sort({
       transactionDate: -1,
     });
 
     res.json({
+      success: true,
       count: transactions.length,
       transactions,
-      sucess: "success",
     });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
 // DELETE TRANSACTION

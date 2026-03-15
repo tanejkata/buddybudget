@@ -1,66 +1,103 @@
 const Budget = require("../models/MonthlyBudget.model");
+const Transaction = require("../models/Transaction.model");
 
-// CREATE or UPDATE Monthly Budget
 exports.setMonthlyBudget = async (req, res) => {
   try {
-    const { userId, month, totalBudget } = req.body;
+    const { userId, month, year, totalBudget } = req.body;
 
-    if (!userId || !month || !totalBudget) {
-      return res
-        .status(400)
-        .json({ message: "Missing fields", success: "fail" });
-    }
+    const budget = await Budget.findOneAndUpdate(
+      { userId, month, year },
+      { totalBudget },
+      { new: true, upsert: true }
+    );
 
-    if (isNaN(totalBudget) || Number(totalBudget) <= 0) {
-      return res.status(400).json({
-        message: "Enter a valid amount",
-        success: "fail",
-      });
-    }
-    const monthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
-    if (!monthRegex.test(month)) {
-      return res
-        .status(400)
-        .json({ message: "Month must be in YYYY-MM format", success: "fail" });
-    }
-
-    let budget = await Budget.findOne({ userId, month });
-
-    if (budget) {
-      budget.totalBudget = totalBudget;
-      await budget.save();
-      return res
-        .status(200)
-        .json({ message: "Monthly Budget Saved", success: "success", budget });
-    }
-
-    budget = await Budget.create({
-      userId,
-      month,
-      totalBudget,
+    res.json({
+      message: "Budget saved successfully",
+      data: budget,
     });
-
-    res
-      .status(200)
-      .json({ message: "Monthly Budget Saved", success: "success", budget });
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to save budget",
+    });
   }
 };
 
-// GET Monthly Budget
 exports.getMonthlyBudget = async (req, res) => {
   try {
-    const { userId, month } = req.params;
+    const { userId, year, month } = req.params;
 
-    const budget = await Budget.findOne({ userId, month });
+    const budgetYear = year || new Date().getFullYear();
 
-    if (!budget) {
-      return res.status(404).json({ message: "Budget not found" });
+    const startDate = new Date(budgetYear, month - 1, 1);
+    const endDate = new Date(budgetYear, month, 0, 23, 59, 59);
+
+    const budget = await Budget.findOne({
+      userId,
+      month,
+      year: budgetYear,
+    });
+
+    const transactions = await Transaction.find({
+      userId,
+      transactionType: "expense",
+      transactionDate: {
+        $gte: startDate,
+        $lte: endDate,
+      },
+    }).lean();
+
+    const totalBudget = budget?.totalBudget || 0;
+
+    const spentAmount = transactions.reduce((sum, t) => sum + t.amount, 0);
+
+    const remainingAmount = totalBudget - spentAmount;
+
+    const remainingPercent = totalBudget
+      ? Math.round((remainingAmount / totalBudget) * 100)
+      : 0;
+
+    const categoryMap = {};
+
+    for (const t of transactions) {
+      if (!categoryMap[t.categoryId]) {
+        categoryMap[t.categoryId] = {
+          name: t.categoryId,
+          transactions: 0,
+          amount: 0,
+          items: [],
+        };
+      }
+
+      categoryMap[t.categoryId].transactions += 1;
+      categoryMap[t.categoryId].amount += t.amount;
+
+      categoryMap[t.categoryId].items.push({
+        amount: t.amount,
+        note: t.note,
+        transactionDate: t.transactionDate,
+      });
     }
 
-    res.json(budget);
-  } catch {
-    res.status(500).json({ message: "Server error" });
+    const breakdown = Object.values(categoryMap).map((c) => ({
+      name: c.name,
+      transactions: c.transactions,
+      amount: c.amount,
+      percentage: totalBudget
+        ? Number(((c.amount / totalBudget) * 100).toFixed(1))
+        : 0,
+      items: c.items,
+    }));
+
+    res.json({
+      totalBudget,
+      spentAmount,
+      remainingAmount,
+      remainingPercent,
+      categories: breakdown,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch budget",
+    });
   }
 };

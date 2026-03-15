@@ -22,6 +22,14 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "CAD",
     },
+    profilePicture: {
+      type: String,
+      default: "",
+    },
+    notificationsEnabled: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,

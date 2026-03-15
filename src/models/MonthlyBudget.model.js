@@ -8,7 +8,11 @@ const budgetSchema = new mongoose.Schema(
       required: true,
     },
     month: {
-      type: String, // e.g. "2026-02"
+      type: Number, 
+      required: true,
+    },
+    year: {
+      type: Number,
       required: true,
     },
     totalBudget: {

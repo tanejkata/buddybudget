@@ -6,6 +6,6 @@ const {
 } = require("../controllers/budget.controller");
 
 router.post("/", setMonthlyBudget);
-router.get("/:userId/:month", getMonthlyBudget);
+router.get("/:userId/:year/:month", getMonthlyBudget);
 
 module.exports = router;
