@@ -1,4 +1,4 @@
-const User = require("../models/User.model");
+const User = require("../models/User.model.js");
 const bcrypt = require("bcrypt");
 
 exports.getUser = async (req, res) => {
@@ -61,30 +61,78 @@ exports.toggleNotifications = async (req, res) => {
 
 exports.updatePassword = async (req, res) => {
   try {
-    const { oldPassword, newPassword } = req.body;
+    const { oldPassword, newPassword, mode } = req.body;
 
-    const user = await User.findById(req.params.userId);
+    const user = await User.findById(req.params.userId).select("+passwordHash");
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // check old password
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({
+        message: "Password must be at least 6 characters",
+      });
+    }
+
+    // GOOGLE USER FIRST-TIME SET PASSWORD
+    if (mode === "set") {
+      if (user.hasPassword) {
+        return res.status(400).json({
+          message: "Password already exists. Please use change password.",
+        });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      user.passwordHash = hashedPassword;
+      user.hasPassword = true;
+
+      await user.save();
+
+      const updatedUser = await User.findById(user._id).select("-passwordHash");
+
+      return res.json({
+        message: "Password set successfully",
+        user: updatedUser,
+      });
+    }
+
+    // NORMAL CHANGE PASSWORD
+    if (!oldPassword) {
+      return res.status(400).json({
+        message: "Old password is required",
+      });
+    }
+
+    if (!user.passwordHash) {
+      return res.status(400).json({
+        message:
+          "This account does not have a password yet. Please set one first.",
+      });
+    }
+
     const isMatch = await bcrypt.compare(oldPassword, user.passwordHash);
 
     if (!isMatch) {
       return res.status(400).json({ message: "Old password incorrect" });
     }
 
-    // hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     user.passwordHash = hashedPassword;
+    user.hasPassword = true;
 
     await user.save();
 
-    res.json({ message: "Password updated successfully" });
+    const updatedUser = await User.findById(user._id).select("-passwordHash");
+
+    return res.json({
+      message: "Password updated successfully",
+      user: updatedUser,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Password update failed" });
+    console.log("Password update failed:", error);
+    return res.status(500).json({ message: "Password update failed" });
   }
 };
