@@ -136,3 +136,29 @@ exports.updatePassword = async (req, res) => {
     return res.status(500).json({ message: "Password update failed" });
   }
 };
+
+exports.updatePushToken = async (req, res) => {
+  try {
+    const { expoPushToken } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      req.params.userId,
+      { expoPushToken: expoPushToken || "" },
+      { new: true }
+    ).select("-passwordHash");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      message: "Push token updated",
+      data: {
+        user,
+      },
+    });
+  } catch (error) {
+    console.log("Update push token error:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};

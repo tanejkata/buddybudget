@@ -2,11 +2,6 @@ const mongoose = require("mongoose");
 
 const categorySchema = new mongoose.Schema(
   {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
     name: {
       type: String,
       required: true,
@@ -17,8 +12,21 @@ const categorySchema = new mongoose.Schema(
       enum: ["income", "expense"],
       required: true,
     },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    isDefault: {
+      type: Boolean,
+      default: false,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
+
+categorySchema.index({ name: 1, type: 1, userId: 1 }, { unique: true });
 
 module.exports = mongoose.model("Category", categorySchema);
